@@ -1,105 +1,57 @@
-'use client';
+import { Metadata } from 'next';
+import { PostDetailClient } from './PostDetailClient';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { getPost, Post } from '@/lib/api';
-import { PostCard } from '@/components/PostCard';
-import { Navigation } from '@/components/Navigation';
-import { BottomNavigation } from '@/components/BottomNavigation';
-import { Loader2, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+type Props = {
+  params: { id: string };
+};
 
-export default function PostDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const postId = parseInt(params.id as string);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const postId = params.id;
   
-  const [post, setPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (isNaN(postId)) {
-      setError('Geçersiz post ID');
-      setLoading(false);
-      return;
+  // Try to fetch post for dynamic metadata
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+    const response = await fetch(`${baseUrl}/posts/${postId}`, {
+      next: { revalidate: 60 }, // Cache for 60 seconds
+    });
+    
+    if (response.ok) {
+      const post = await response.json();
+      const contentPreview = post.content.substring(0, 150);
+      
+      return {
+        title: `Paylaşım | AnonWall`,
+        description: contentPreview,
+        openGraph: {
+          title: `AnonWall Paylaşımı`,
+          description: contentPreview,
+          type: 'article',
+        },
+        twitter: {
+          card: 'summary',
+          title: `AnonWall Paylaşımı`,
+          description: contentPreview,
+        },
+        robots: {
+          index: true,
+          follow: true,
+        },
+      };
     }
+  } catch (error) {
+    // Fallback if post fetch fails
+  }
 
-    async function loadPost() {
-      try {
-        const postData = await getPost(postId);
-        setPost(postData);
-      } catch (err: any) {
-        setError(err.message || 'Post yüklenemedi');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadPost();
-  }, [postId]);
-
-  const handleLikeChange = (postId: number, liked: boolean, likesCount: number) => {
-    if (post && post.id === postId) {
-      setPost({ ...post, is_liked: liked, likes_count: likesCount });
-    }
+  return {
+    title: 'Paylaşım | AnonWall',
+    description: 'AnonWall paylaşım detay sayfası',
+    robots: {
+      index: true,
+      follow: true,
+    },
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background pb-16 md:pb-0">
-        <Navigation session={null} />
-        <main className="container mx-auto px-4 py-8 max-w-2xl">
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        </main>
-        <BottomNavigation />
-      </div>
-    );
-  }
-
-  if (error || !post) {
-    return (
-      <div className="min-h-screen bg-background pb-16 md:pb-0">
-        <Navigation session={null} />
-        <main className="container mx-auto px-4 py-8 max-w-2xl">
-          <div className="text-center space-y-4 py-16">
-            <h1 className="text-2xl font-bold">Post Bulunamadı</h1>
-            <p className="text-muted-foreground">{error || 'Bu post mevcut değil veya silinmiş olabilir.'}</p>
-            <Link href="/">
-              <Button variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Ana Sayfaya Dön
-              </Button>
-            </Link>
-          </div>
-        </main>
-        <BottomNavigation />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background pb-16 md:pb-0">
-      <Navigation session={null} />
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="mb-6">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Geri Dön
-            </Button>
-          </Link>
-        </div>
-
-        <div className="space-y-4">
-          <PostCard post={post} onLikeChange={handleLikeChange} />
-        </div>
-      </main>
-      <BottomNavigation />
-    </div>
-  );
 }
 
+export default function PostDetailPage({ params }: Props) {
+  return <PostDetailClient postId={params.id} />;
+}

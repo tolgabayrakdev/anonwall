@@ -12,6 +12,11 @@ export function BottomNavigation() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
 
+  // Don't show on landing page
+  if (pathname === '/landing' || (pathname === '/' && !isAuthenticated)) {
+    return null;
+  }
+
   const handleLogout = () => {
     logout();
     router.push('/');
