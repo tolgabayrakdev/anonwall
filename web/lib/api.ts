@@ -1,6 +1,16 @@
 // API client for AnonWall
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Ensure API_URL always ends with /api
+const getApiUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+  // If URL doesn't end with /api, add it
+  if (!url.endsWith('/api')) {
+    return url.endsWith('/') ? `${url}api` : `${url}/api`;
+  }
+  return url;
+};
+
+const API_URL = getApiUrl();
 
 export interface Post {
   id: number;
