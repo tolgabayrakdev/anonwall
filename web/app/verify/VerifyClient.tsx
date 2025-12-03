@@ -50,7 +50,7 @@ export function VerifyClient() {
       
       // Save token
       if (result.token) {
-        localStorage.setItem('authToken', result.token);
+        localStorage.setItem('auth_token', result.token);
         await refreshUser();
       }
       
