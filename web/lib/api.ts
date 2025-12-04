@@ -251,7 +251,7 @@ export async function login(phone: string, password: string): Promise<AuthRespon
   }
   const data = await response.json();
   // Store token in localStorage
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && data.token) {
     localStorage.setItem('auth_token', data.token);
   }
   return data;
@@ -262,12 +262,24 @@ export async function getMe(): Promise<User> {
   if (!token) {
     throw new Error('Token bulunamadı');
   }
+  
+  // Ensure token is a string and not empty
+  const cleanToken = token.trim();
+  if (!cleanToken) {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+    }
+    throw new Error('Token bulunamadı');
+  }
+  
   const response = await fetch(`${API_URL}/auth/me`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${cleanToken}`,
+      'Content-Type': 'application/json',
     },
     credentials: 'include',
   });
+  
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
       // Clear invalid token
@@ -275,6 +287,8 @@ export async function getMe(): Promise<User> {
         localStorage.removeItem('auth_token');
       }
     }
+    const errorText = await response.text();
+    console.error('Auth error response:', response.status, errorText);
     throw new Error('Kullanıcı bilgileri alınamadı');
   }
   const data = await response.json();
